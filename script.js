@@ -29,17 +29,34 @@ function initReveal() {
 
 function initMenu() {
   const toggle = document.querySelector(".menu-toggle");
-  const nav = document.querySelector(".desktop-nav");
-  if (!toggle || !nav) return;
-  toggle.addEventListener("click", () => {
-    const isOpen = nav.classList.toggle("open");
-    toggle.setAttribute("aria-expanded", String(isOpen));
-    toggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
-  });
-  nav.querySelectorAll("a").forEach(link => link.addEventListener("click", () => {
-    nav.classList.remove("open");
-    toggle.setAttribute("aria-expanded", "false");
-  }));
+  if (!toggle) return;
+  const drawer = document.createElement("aside");
+  drawer.className = "side-drawer";
+  drawer.id = "side-drawer";
+  drawer.setAttribute("aria-label", "Site navigation");
+  drawer.innerHTML = '<button class="drawer-close" aria-label="Close navigation">×</button><nav>'
+    + '<a href="' + siteHome + '">Home</a>'
+    + '<a href="' + siteHome + '#latest">The journal</a>'
+    + '<a href="' + siteHome + '#archive">All stories</a>'
+    + '<a href="' + siteHome + '#explore">Explore</a>'
+    + '<a href="' + siteHome + '#about">Our appetite</a></nav>';
+  const scrim = document.createElement("div");
+  scrim.className = "drawer-scrim";
+  document.body.append(drawer, scrim);
+  toggle.setAttribute("aria-controls", "side-drawer");
+  function setOpen(open) {
+    drawer.classList.toggle("open", open);
+    scrim.classList.toggle("open", open);
+    document.body.classList.toggle("drawer-open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+    if (open) drawer.querySelector("a").focus(); else if (drawer.contains(document.activeElement)) toggle.focus();
+  }
+  toggle.addEventListener("click", () => setOpen(!drawer.classList.contains("open")));
+  scrim.addEventListener("click", () => setOpen(false));
+  drawer.querySelector(".drawer-close").addEventListener("click", () => setOpen(false));
+  drawer.querySelectorAll("a").forEach(link => link.addEventListener("click", () => setOpen(false)));
+  document.addEventListener("keydown", event => { if (event.key === "Escape") setOpen(false); });
 }
 
 function initTopicPicker() {
@@ -158,7 +175,7 @@ async function loadWordPressArticle(slug) {
     const articleContent = keepLinksOnSite(post.content?.rendered || "<p>This article does not have any published content yet.</p>");
     main.innerHTML = `
       <article class="reader-page">
-        <div class="reader-topline"><a href="${siteHome}">← BACK TO THE JOURNAL</a><span>THE BIG BACK CLUB / FIELD NOTES</span></div>
+        <div class="reader-topline"><a href="${siteHome}">← BACK TO THE JOURNAL</a></div>
         <header class="reader-heading">
           <span class="eyebrow">${escapeHtml(category.toUpperCase())} · ${escapeHtml(formatArticleDate(post.date).toUpperCase())}</span>
           <h1>${escapeHtml(title)}</h1>
@@ -167,11 +184,11 @@ async function loadWordPressArticle(slug) {
         </header>
         ${image ? `<figure class="reader-cover"><img src="${escapeAttribute(image)}" alt="${escapeAttribute(plainText(post.title?.rendered))}" fetchpriority="high"></figure>` : ""}
         <div class="reader-content-wrap">
-          <aside class="reader-side-note"><span>ON THE MENU</span><span>Food, questions<br>and a little science.</span><a href="${siteHome}#latest">MORE STORIES ↗</a></aside>
           <div class="reader-content">${articleContent}</div>
         </div>
-        <footer class="reader-end"><span class="reader-end-star">✳</span><p>That’s food for thought.</p><a class="dark-button" href="${siteHome}#latest">KEEP EXPLORING <span>↗</span></a></footer>
+        <footer class="reader-end"><span class="reader-end-star">✳</span><a class="dark-button" href="${siteHome}#latest">KEEP EXPLORING <span>↗</span></a></footer>
       </article>`;
+    document.querySelectorAll(".reader-content > *").forEach(el => el.classList.add("reveal")); initReveal();
     document.title = title + " — The Big Back Club";
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   } catch (error) {
@@ -317,3 +334,28 @@ document.addEventListener("DOMContentLoaded", () => {
   if (articleSlug) loadWordPressArticle(articleSlug);
   else { loadWordPressPosts(); loadArchive(); }
 });
+
+(function scrollMotion() {
+  if (reduceMotion) return;
+  document.documentElement.classList.add("js-motion");
+  const bar = document.createElement("div");
+  bar.className = "scroll-progress";
+  document.body.appendChild(bar);
+  const photo = document.querySelector(".hero-photo");
+  let ticking = false;
+  function update() {
+    ticking = false;
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = "scaleX(" + (max > 0 ? Math.min(1, scrollY / max) : 0) + ")";
+    if (photo && scrollY < innerHeight * 1.5) {
+      photo.style.setProperty("--py", (scrollY * 0.08).toFixed(1) + "px");
+      photo.style.setProperty("--ps", (1 + Math.min(scrollY, 600) / 6000).toFixed(4));
+    }
+  }
+  addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+  addEventListener("resize", update);
+  update();
+  document.querySelectorAll(".featured-grid, .archive-grid").forEach(grid => {
+    [...grid.children].forEach((el, i) => el.style.setProperty("--d", (i % 3) * 0.12 + "s"));
+  });
+})();
