@@ -1,5 +1,6 @@
 const WP_API = "https://thebigbackclub.wordpress.com/wp-json/wp/v2";
 const blogHome = "https://thebigbackclub.wordpress.com/";
+const siteHome = window.location.pathname;
 const fallbackTopics = {
   science: { title: "Why does chilli burn?", description: "Discover how capsaicin tricks your brain into sensing heat.", search: "food science" },
   health: { title: "What is food actually doing in your body?", description: "Explore the research behind everyday ingredients and the way we eat.", search: "health" },
@@ -51,7 +52,8 @@ function initTopicPicker() {
     buttons.forEach(item => item.classList.toggle("active", item === button));
     title.textContent = topic.title;
     description.textContent = topic.description;
-    link.href = blogHome + "?s=" + encodeURIComponent(topic.search);
+    link.href = "#latest";
+    document.querySelector(".latest")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
     const result = document.querySelector(".topic-result");
     result.animate?.([{ transform: "translateY(5px)", opacity: .65 }, { transform: "translateY(0)", opacity: 1 }], { duration: 240, easing: "ease-out" });
   }));
@@ -86,12 +88,12 @@ function makePostCard(post, index) {
   const excerpt = plainText(post.excerpt?.rendered).slice(0, 150);
   const category = categoryFor(post);
   const date = post.date ? new Date(post.date).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" }) : "THE JOURNAL";
-  const url = post.link || blogHome;
+  const url = siteHome + "?article=" + encodeURIComponent(post.slug || "");
   const image = postImage(post, index);
   const readingTime = Math.max(2, Math.round(plainText(post.content?.rendered).split(/\s+/).filter(Boolean).length / 220));
   article.dataset.category = category;
   article.innerHTML = `
-    <a class="feature-image live-image" href="${url}" target="_blank" rel="noreferrer" aria-label="Read: ${escapeAttribute(title)}" style="background-image:url('${escapeCssUrl(image)}')">
+    <a class="feature-image live-image" href="${url}" aria-label="Read: ${escapeAttribute(title)}" style="background-image:url('${escapeCssUrl(image)}')">
       <span class="image-index">FIELD NOTE ${String(index + 1).padStart(3, "0")}</span><span class="image-arrow">↗</span>
     </a>
     <div class="card-meta"><span>${escapeHtml(category.toUpperCase())}</span><span>${readingTime} MIN READ</span></div>
@@ -106,6 +108,50 @@ function escapeHtml(value) {
 }
 function escapeAttribute(value) { return escapeHtml(value); }
 function escapeCssUrl(value) { return String(value).replace(/['"\\()\n\r]/g, ""); }
+
+
+function formatArticleDate(value) {
+  if (!value) return "FROM THE JOURNAL";
+  return new Date(value).toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" });
+}
+
+async function loadWordPressArticle(slug) {
+  const main = document.querySelector("main");
+  if (!main) return;
+  main.innerHTML = '<section class="reader-loading"><span class="eyebrow">OPENING THE NOTEBOOK</span><h1>One moment, curiosity is loading.</h1></section>';
+  try {
+    const response = await fetch(WP_API + "/posts?slug=" + encodeURIComponent(slug) + "&_embed=1", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("WordPress returned " + response.status);
+    const posts = await response.json();
+    if (!Array.isArray(posts) || !posts.length) throw new Error("Article not found");
+    const post = posts[0];
+    const title = plainText(post.title?.rendered) || "A story from the journal";
+    const category = categoryFor(post);
+    const image = postImage(post, 0);
+    const articleContent = post.content?.rendered || "<p>This article does not have any published content yet.</p>";
+    main.innerHTML = `
+      <article class="reader-page">
+        <div class="reader-topline"><a href="${siteHome}">← BACK TO THE JOURNAL</a><span>THE BIG BACK CLUB / FIELD NOTES</span></div>
+        <header class="reader-heading">
+          <span class="eyebrow">${escapeHtml(category.toUpperCase())} · ${escapeHtml(formatArticleDate(post.date).toUpperCase())}</span>
+          <h1>${escapeHtml(title)}</h1>
+          <p class="reader-deck">${escapeHtml(plainText(post.excerpt?.rendered))}</p>
+          <div class="reader-byline"><span>THE BIG BACK CLUB</span><span>WHERE FOOD MEETS SCIENCE</span></div>
+        </header>
+        ${image ? `<figure class="reader-cover"><img src="${escapeAttribute(image)}" alt="${escapeAttribute(plainText(post.title?.rendered))}" fetchpriority="high"></figure>` : ""}
+        <div class="reader-content-wrap">
+          <aside class="reader-side-note"><span>ON THE MENU</span><span>Food, questions<br>and a little science.</span><a href="${siteHome}#latest">MORE STORIES ↗</a></aside>
+          <div class="reader-content">${articleContent}</div>
+        </div>
+        <footer class="reader-end"><span class="reader-end-star">✳</span><p>That’s food for thought.</p><a class="dark-button" href="${siteHome}#latest">KEEP EXPLORING <span>↗</span></a></footer>
+      </article>`;
+    document.title = title + " — The Big Back Club";
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  } catch (error) {
+    main.innerHTML = `<section class="reader-loading"><span class="eyebrow">A LITTLE DETOUR</span><h1>We couldn’t find that story.</h1><p>It may have moved, or the journal may be taking a moment to respond.</p><a class="dark-button" href="${siteHome}#latest">BACK TO THE JOURNAL <span>↗</span></a></section>`;
+    console.error("Could not load WordPress article:", error);
+  }
+}
 
 async function loadWordPressPosts() {
   const grid = document.querySelector(".featured-grid");
@@ -154,5 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTopicPicker();
   initImageMotion();
   initMicroInteractions();
-  loadWordPressPosts();
+  const articleSlug = new URLSearchParams(window.location.search).get("article");
+  if (articleSlug) loadWordPressArticle(articleSlug);
+  else loadWordPressPosts();
 });
