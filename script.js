@@ -1,4 +1,5 @@
-const WP_API = "https://thebigbackclub.wordpress.com/wp-json/wp/v2";
+// WordPress.com sites expose the standard REST API through public-api.wordpress.com (the /wp-json path on the subdomain returns 404).
+const WP_API = "https://public-api.wordpress.com/wp/v2/sites/thebigbackclub.wordpress.com";
 const blogHome = "https://thebigbackclub.wordpress.com/";
 const siteHome = window.location.pathname;
 const fallbackTopics = {
@@ -67,14 +68,27 @@ function plainText(html) {
 
 function categoryFor(post) {
   const terms = post?._embedded?.["wp:term"]?.flat?.() || [];
-  const names = terms.map(term => term.name).filter(Boolean);
-  return names.find(name => /science|health|travel/i.test(name)) || names[0] || "From the journal";
+  const names = terms.map(term => plainText(term.name)).filter(Boolean);
+  const pick = names.find(name => /science|health|travel/i.test(name)) || names[0] || "From the journal";
+  return pick.charAt(0).toUpperCase() + pick.slice(1);
+}
+
+function firstContentImage(html) {
+  const holder = document.createElement("div");
+  holder.innerHTML = html || "";
+  const img = holder.querySelector("img");
+  const src = img?.getAttribute("src") || "";
+  return src.split("?")[0] ? src : "";
+}
+
+function ownImage(post) {
+  const media = post?._embedded?.["wp:featuredmedia"]?.[0];
+  const sizes = media?.media_details?.sizes || {};
+  return post?.jetpack_featured_media_url || sizes.large?.source_url || sizes.medium_large?.source_url || media?.source_url || "";
 }
 
 function postImage(post, index) {
-  const media = post?._embedded?.["wp:featuredmedia"]?.[0];
-  const sizes = media?.media_details?.sizes || {};
-  return sizes.large?.source_url || sizes.medium_large?.source_url || media?.source_url || [
+  return ownImage(post) || firstContentImage(post?.content?.rendered) || [
     "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=900&q=85",
     "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=900&q=85",
     "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=900&q=85"
@@ -85,7 +99,8 @@ function makePostCard(post, index) {
   const article = document.createElement("article");
   article.className = "feature-card reveal";
   const title = plainText(post.title?.rendered) || "A story from the journal";
-  const excerpt = plainText(post.excerpt?.rendered).slice(0, 150);
+  const fullExcerpt = plainText(post.excerpt?.rendered);
+  const excerpt = fullExcerpt.length > 150 ? fullExcerpt.slice(0, 150).replace(/\s+\S*$/, "") + "…" : fullExcerpt;
   const category = categoryFor(post);
   const date = post.date ? new Date(post.date).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" }) : "THE JOURNAL";
   const url = siteHome + "?article=" + encodeURIComponent(post.slug || "");
@@ -97,9 +112,9 @@ function makePostCard(post, index) {
       <span class="image-index">FIELD NOTE ${String(index + 1).padStart(3, "0")}</span><span class="image-arrow">↗</span>
     </a>
     <div class="card-meta"><span>${escapeHtml(category.toUpperCase())}</span><span>${readingTime} MIN READ</span></div>
-    <h3><a href="${url}" target="_blank" rel="noreferrer">${escapeHtml(title)}</a></h3>
+    <h3><a href="${url}">${escapeHtml(title)}</a></h3>
     <p>${escapeHtml(excerpt || "A little more to discover about the food we eat and the world around it.")}</p>
-    <a class="text-link" href="${url}" target="_blank" rel="noreferrer">READ THE STORY <span>↗</span></a>`;
+    <a class="text-link" href="${url}">READ THE STORY <span>↗</span></a>`;
   return article;
 }
 
@@ -115,6 +130,18 @@ function formatArticleDate(value) {
   return new Date(value).toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" });
 }
 
+// Links to other posts of the journal stay inside this site instead of opening WordPress.
+function keepLinksOnSite(html) {
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  holder.querySelectorAll("a[href]").forEach(anchor => {
+    const match = anchor.getAttribute("href").match(/^https?:\/\/thebigbackclub\.wordpress\.com\/\d{4}\/\d{2}\/\d{2}\/([^/?#]+)/);
+    if (match) anchor.setAttribute("href", siteHome + "?article=" + encodeURIComponent(match[1]));
+    else if (/^https?:/i.test(anchor.getAttribute("href"))) { anchor.setAttribute("target", "_blank"); anchor.setAttribute("rel", "noreferrer noopener"); }
+  });
+  return holder.innerHTML;
+}
+
 async function loadWordPressArticle(slug) {
   const main = document.querySelector("main");
   if (!main) return;
@@ -127,8 +154,8 @@ async function loadWordPressArticle(slug) {
     const post = posts[0];
     const title = plainText(post.title?.rendered) || "A story from the journal";
     const category = categoryFor(post);
-    const image = postImage(post, 0);
-    const articleContent = post.content?.rendered || "<p>This article does not have any published content yet.</p>";
+    const image = ownImage(post);
+    const articleContent = keepLinksOnSite(post.content?.rendered || "<p>This article does not have any published content yet.</p>");
     main.innerHTML = `
       <article class="reader-page">
         <div class="reader-topline"><a href="${siteHome}">← BACK TO THE JOURNAL</a><span>THE BIG BACK CLUB / FIELD NOTES</span></div>
@@ -210,6 +237,49 @@ async function loadWordPressPosts() {
   }
 }
 
+async function loadArchive() {
+  const section = document.querySelector("#archive");
+  const grid = document.querySelector(".archive-grid");
+  if (!section || !grid) return;
+  const chips = section.querySelector(".archive-filters");
+  const count = section.querySelector(".archive-count");
+  try {
+    let posts = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const response = await fetch(WP_API + "/posts?per_page=100&page=" + page + "&status=publish&_embed=1&orderby=date&order=desc", { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("WordPress returned " + response.status);
+      totalPages = Number(response.headers.get("X-WP-TotalPages")) || 1;
+      posts = posts.concat(await response.json());
+      page += 1;
+    } while (page <= totalPages);
+    if (!posts.length) return;
+    const cards = posts.map((post, index) => makePostCard(post, index));
+    cards.forEach(card => card.classList.add("is-visible"));
+    grid.replaceChildren(...cards);
+    if (count) count.textContent = posts.length + (posts.length === 1 ? " STORY" : " STORIES");
+    const categories = [...new Set(cards.map(card => card.dataset.category))];
+    if (chips && categories.length > 1) {
+      chips.innerHTML = "";
+      ["All", ...categories].forEach((name, position) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = name;
+        button.className = "archive-chip" + (position === 0 ? " active" : "");
+        button.addEventListener("click", () => {
+          chips.querySelectorAll(".archive-chip").forEach(chip => chip.classList.toggle("active", chip === button));
+          cards.forEach(card => { card.hidden = position !== 0 && card.dataset.category !== name; });
+        });
+        chips.appendChild(button);
+      });
+    }
+    section.hidden = false;
+  } catch (error) {
+    console.info("Could not load the full story archive.", error);
+  }
+}
+
 function initImageMotion() {
   const photo = document.querySelector(".hero-photo");
   if (!photo || reduceMotion || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
@@ -245,5 +315,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initFallbackArticleLinks();
   const articleSlug = new URLSearchParams(window.location.search).get("article");
   if (articleSlug) loadWordPressArticle(articleSlug);
-  else loadWordPressPosts();
+  else { loadWordPressPosts(); loadArchive(); }
 });

@@ -37,3 +37,49 @@
 .reader-end p{font:italic clamp(28px,4vw,46px) var(--serif);margin:0 0 8px}
 .reader-end .dark-button{margin-top:5px}
 @media(max-width:650px){.reader-topline{font-size:8px;padding:0 5%}.reader-topline span{max-width:45%;text-align:right}.reader-heading{padding:65px 6% 38px}.reader-heading h1{font-size:clamp(43px,12vw,68px)}.reader-deck{font-size:15px}.reader-byline{font-size:8px}.reader-cover{margin:0 5%;height:300px}.reader-content-wrap{display:block;margin:55px auto 65px;padding:0 7%}.reader-side-note{position:static;display:grid;grid-template-columns:1fr 1fr;align-items:center;margin-bottom:35px;padding-bottom:18px;border-bottom:1px solid var(--line)}.reader-side-note a{grid-column:1/-1}.reader-content{font-size:16px}.reader-loading{padding:10vh 7%}}
+
+
+/* ===== Theme v2: lighter blue, cream lettering, navy shadow (chunky + handwritten) ===== */
+:root{--paper:#A9C0D8;--ink:#18263E;--green:#FFFBF0;--tomato:#FFFBF0;--navy:#38547A;--line:rgba(24,38,62,.28);--display:"Modak","Playfair Display",Georgia,sans-serif;--hand:"Reenie Beanie","Playfair Display",cursive}
+body{background:var(--paper)}
+.site-header{background:rgba(169,192,216,.93)}
+.wordmark-dot,.footer-wordmark span,.asterisk,.note-star,.ticker-track b,.about-mark span:nth-child(2),.reader-end-star{color:var(--ink)}
+.hero h1{font-family:var(--display);font-style:normal;font-weight:400;text-transform:uppercase;letter-spacing:0;line-height:.98;color:var(--green);text-shadow:5px 5px 0 var(--navy);font-size:clamp(56px,8.4vw,124px)}
+.hero h1 em{font-family:var(--display);font-style:normal;font-weight:400;letter-spacing:0;color:var(--green)}
+.hero-note p,.hand-note,.mini-caption,.aside-note{font-family:var(--hand);font-style:normal}
+.hero-note p{font-size:22px;line-height:1.1}
+.hand-note{font-size:30px;line-height:1}
+.hero-note p i{font-style:normal;text-decoration:underline wavy;text-decoration-thickness:1px}
+.section-heading h2,.curiosity-copy h2,.about-copy h2,.newsletter h2{text-shadow:3px 3px 0 var(--navy);color:var(--green)}
+.section-heading h2 em,.curiosity-copy h2 em,.about-copy h2 em,.newsletter h2 em{color:var(--green)}
+.feature-card h3 a:hover{color:var(--navy)}
+.photo-stamp{background:var(--green);color:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+.image-arrow{background:var(--green)}
+.curiosity-section{background:var(--navy)}
+.curiosity-section,.curiosity-section .eyebrow,.curiosity-section p,.curiosity-section .topic-option,.curiosity-section .topic-result{color:var(--green)}
+.curiosity-section .topic-option{border-bottom-color:rgba(255,251,240,.5)}
+.curiosity-section .curiosity-copy h2{text-shadow:3px 3px 0 var(--ink)}
+.curiosity-section a,.curiosity-section .result-link{color:var(--green)}
+.newsletter{background:#8EA9C6}
+.newsletter-star{color:var(--green)}
+.ticker{background:var(--green);color:var(--ink)}
+.dark-button:hover{background:var(--navy)}
+.mini-sun{color:var(--green);text-shadow:1px 1px var(--ink),-1px -1px var(--ink)}
+.reader-content a{color:var(--navy)}
+.reader-content blockquote{border-left-color:var(--navy)}
+.reader-cover{background:#8EA9C6}
+.reader-end{background:var(--green)}
+.cursor-note{background:var(--ink);color:var(--green)}
+@media(max-width:900px){.hero h1{font-size:clamp(56px,13vw,100px)}}
+@media(max-width:560px){.hero h1{font-size:clamp(52px,17vw,88px);text-shadow:4px 4px 0 var(--navy)}}
+.aside-note{font-family:var(--mono);font-size:10px}
+.mini-caption{font-size:22px;line-height:1}
+.curiosity-section .topic-result,.curiosity-section .topic-result p,.curiosity-section .topic-result .result-link,.curiosity-section .topic-result span{color:var(--ink)}
+
+/* ===== All stories archive ===== */
+.archive[hidden],.archive-grid .feature-card[hidden]{display:none}
+.archive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:48px 28px;margin-top:48px}
+.archive-filters{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-end;max-width:420px;justify-content:flex-end}
+.archive-chip{font:11px var(--mono);letter-spacing:.04em;padding:8px 14px;border:1px solid var(--ink);border-radius:50px;background:none;color:var(--ink);cursor:pointer}
+.archive-chip.active,.archive-chip:hover{background:var(--ink);color:var(--green)}
+.archive-grid .feature-card{margin:0}
