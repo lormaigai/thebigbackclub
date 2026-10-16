@@ -158,3 +158,4 @@ body{overflow-x:clip}
 .reader-cover{max-width:1000px}
 .reader-cover img{height:auto;max-height:520px;object-fit:cover}
 @media(max-width:560px){.reader-cover img{max-height:360px}}
+.newsletter{overflow:hidden}
