@@ -153,6 +153,48 @@ async function loadWordPressArticle(slug) {
   }
 }
 
+
+function initFallbackArticleLinks() {
+  const grid = document.querySelector(".featured-grid");
+  if (!grid) return;
+  grid.querySelectorAll("a[href='#latest']").forEach(link => {
+    link.addEventListener("click", async event => {
+      const card = link.closest(".feature-card");
+      const heading = card?.querySelector("h3")?.textContent?.trim();
+      if (!heading) return;
+      event.preventDefault();
+      const originalText = link.textContent;
+      link.setAttribute("aria-busy", "true");
+      try {
+        const query = heading.includes("cookie") ? "cookie science" :
+          heading.toLowerCase().includes("matcha") ? "matcha" :
+          heading.toLowerCase().includes("chilli") ? "spicy food" : heading;
+        const response = await fetch(WP_API + "/posts?search=" + encodeURIComponent(query) + "&per_page=5&_embed=1", { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error("WordPress returned " + response.status);
+        const posts = await response.json();
+        if (!Array.isArray(posts) || !posts.length) throw new Error("No matching published article found");
+        const post = posts.find(item => {
+          const title = plainText(item.title?.rendered).toLowerCase();
+          return heading.toLowerCase().split(/\\W+/).filter(word => word.length > 4).some(word => title.includes(word));
+        }) || posts[0];
+        const slug = post.slug;
+        if (!slug) throw new Error("The article has no WordPress slug");
+        history.pushState({}, "", siteHome + "?article=" + encodeURIComponent(slug));
+        await loadWordPressArticle(slug);
+      } catch (error) {
+        console.error("Could not open the selected story:", error);
+        const main = document.querySelector("main");
+        if (main) {
+          main.innerHTML = '<section class="reader-loading"><span class="eyebrow">THE JOURNAL IS TAKING A MOMENT</span><h1>We couldn’t load this story just now.</h1><p>Please check your connection and try again.</p><a class="dark-button" href="' + siteHome + '#latest">BACK TO THE JOURNAL <span>↗</span></a></section>';
+          window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+        }
+      } finally {
+        link.removeAttribute("aria-busy");
+      }
+    });
+  });
+}
+
 async function loadWordPressPosts() {
   const grid = document.querySelector(".featured-grid");
   if (!grid) return;
@@ -200,6 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTopicPicker();
   initImageMotion();
   initMicroInteractions();
+  initFallbackArticleLinks();
   const articleSlug = new URLSearchParams(window.location.search).get("article");
   if (articleSlug) loadWordPressArticle(articleSlug);
   else loadWordPressPosts();
