@@ -75,3 +75,11 @@ body{background:var(--paper)}
 .aside-note{font-family:var(--mono);font-size:10px}
 .mini-caption{font-size:22px;line-height:1}
 .curiosity-section .topic-result,.curiosity-section .topic-result p,.curiosity-section .topic-result .result-link,.curiosity-section .topic-result span{color:var(--ink)}
+
+/* ===== All stories archive ===== */
+.archive[hidden],.archive-grid .feature-card[hidden]{display:none}
+.archive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:48px 28px;margin-top:48px}
+.archive-filters{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-end;max-width:420px;justify-content:flex-end}
+.archive-chip{font:11px var(--mono);letter-spacing:.04em;padding:8px 14px;border:1px solid var(--ink);border-radius:50px;background:none;color:var(--ink);cursor:pointer}
+.archive-chip.active,.archive-chip:hover{background:var(--ink);color:var(--green)}
+.archive-grid .feature-card{margin:0}
