@@ -161,3 +161,5 @@ body{overflow-x:clip}
 .newsletter{overflow:hidden}
 .archives-down{width:48px;height:48px;border:1px solid var(--ink);border-radius:50%;display:inline-grid;place-items:center;font-size:20px;margin-top:30px;color:var(--ink);transition:transform .3s,background .3s}
 .archives-down:hover{transform:translateY(4px);background:var(--soft)}
+.feature-image.no-photo{background:var(--soft);display:grid;place-items:center}
+.feature-image.no-photo:after{content:"✳";font-size:64px;color:var(--title);opacity:.55}
