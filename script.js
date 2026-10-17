@@ -35,11 +35,10 @@ function initMenu() {
   drawer.id = "side-drawer";
   drawer.setAttribute("aria-label", "Site navigation");
   drawer.innerHTML = '<button class="drawer-close" aria-label="Close navigation">×</button><nav>'
-    + '<a href="' + siteHome + '">Home</a>'
-    + '<a href="' + siteHome + '#latest">The journal</a>'
-    + '<a href="' + siteHome + '#archive">All stories</a>'
-    + '<a href="' + siteHome + '#explore">Explore</a>'
-    + '<a href="' + siteHome + '#about">Our appetite</a></nav>';
+    + '<a href="index.html">Home</a>'
+    + '<a href="archive.html">All stories</a>'
+    + '<a href="explore.html">Explore</a>'
+    + '<a href="about.html">Our appetite</a></nav>';
   const scrim = document.createElement("div");
   scrim.className = "drawer-scrim";
   document.body.append(drawer, scrim);
@@ -70,8 +69,7 @@ function initTopicPicker() {
     buttons.forEach(item => item.classList.toggle("active", item === button));
     title.textContent = topic.title;
     description.textContent = topic.description;
-    link.href = "#latest";
-    document.querySelector(".latest")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+    link.href = "archive.html";
     const result = document.querySelector(".topic-result");
     result.animate?.([{ transform: "translateY(5px)", opacity: .65 }, { transform: "translateY(0)", opacity: 1 }], { duration: 240, easing: "ease-out" });
   }));
@@ -175,7 +173,7 @@ async function loadWordPressArticle(slug) {
     const articleContent = keepLinksOnSite(post.content?.rendered || "<p>This article does not have any published content yet.</p>");
     main.innerHTML = `
       <article class="reader-page">
-        <div class="reader-topline"><a href="${siteHome}">← BACK TO THE JOURNAL</a></div>
+        <div class="reader-topline"><a href="index.html">← BACK TO THE JOURNAL</a></div>
         <header class="reader-heading">
           <span class="eyebrow">${escapeHtml(category.toUpperCase())} · ${escapeHtml(formatArticleDate(post.date).toUpperCase())}</span>
           <h1>${escapeHtml(title)}</h1>
@@ -186,13 +184,13 @@ async function loadWordPressArticle(slug) {
         <div class="reader-content-wrap">
           <div class="reader-content">${articleContent}</div>
         </div>
-        <footer class="reader-end"><span class="reader-end-star">✳</span><a class="dark-button" href="${siteHome}#latest">KEEP EXPLORING <span>↗</span></a></footer>
+        <footer class="reader-end"><span class="reader-end-star">✳</span><a class="dark-button" href="archive.html">KEEP EXPLORING <span>↗</span></a></footer>
       </article>`;
     document.querySelectorAll(".reader-content > *").forEach(el => el.classList.add("reveal")); initReveal();
     document.title = title + " — The Big Back Club";
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   } catch (error) {
-    main.innerHTML = `<section class="reader-loading"><span class="eyebrow">A LITTLE DETOUR</span><h1>We couldn’t find that story.</h1><p>It may have moved, or the journal may be taking a moment to respond.</p><a class="dark-button" href="${siteHome}#latest">BACK TO THE JOURNAL <span>↗</span></a></section>`;
+    main.innerHTML = `<section class="reader-loading"><span class="eyebrow">A LITTLE DETOUR</span><h1>We couldn’t find that story.</h1><p>It may have moved, or the journal may be taking a moment to respond.</p><a class="dark-button" href="archive.html">BACK TO THE STORIES <span>↗</span></a></section>`;
     console.error("Could not load WordPress article:", error);
   }
 }
@@ -229,7 +227,7 @@ function initFallbackArticleLinks() {
         console.error("Could not open the selected story:", error);
         const main = document.querySelector("main");
         if (main) {
-          main.innerHTML = '<section class="reader-loading"><span class="eyebrow">THE JOURNAL IS TAKING A MOMENT</span><h1>We couldn’t load this story just now.</h1><p>Please check your connection and try again.</p><a class="dark-button" href="' + siteHome + '#latest">BACK TO THE JOURNAL <span>↗</span></a></section>';
+          main.innerHTML = '<section class="reader-loading"><span class="eyebrow">THE JOURNAL IS TAKING A MOMENT</span><h1>We couldn’t load this story just now.</h1><p>Please check your connection and try again.</p><a class="dark-button" href="archive.html">BACK TO THE STORIES <span>↗</span></a></section>';
           window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
         }
       } finally {

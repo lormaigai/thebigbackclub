@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FBF7EE">
+  <meta name="description" content="Follow your curiosity at The Big Back Club: pick a craving and fall into a food-science rabbit hole.">
+  <title>Explore — The Big Back Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Modak&family=Reenie+Beanie&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="index.html" aria-label="The Big Back Club home">the big <span>back</span> club<span class="wordmark-dot">.</span></a>
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="archive.html">All stories</a>
+      <a href="explore.html">Explore</a>
+      <a href="about.html">Our appetite</a>
+    </nav>
+    <a class="header-cta" href="archive.html">Explore stories <span>↘</span></a>
+    <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false"><span></span><span></span></button>
+  </header>
+  <main id="explore-page">
+    <section class="curiosity-section" id="explore">
+      <div class="curiosity-inner">
+        <div class="curiosity-copy reveal"><span class="eyebrow">02 / FOLLOW YOUR CURIOSITY</span><h2>What’s on<br>your <em>mind?</em></h2><p>Pick a craving. We’ll point you towards a rabbit hole worth falling into.</p><span class="hand-note">go on, poke around ↗</span></div>
+        <div class="topic-picker reveal" role="group" aria-label="Choose a topic">
+          <button class="topic-option active" data-topic="science"><span class="topic-number">01</span><span class="topic-title">The science of food</span><span class="topic-icon">↗</span></button>
+          <button class="topic-option" data-topic="health"><span class="topic-number">02</span><span class="topic-title">Food & your body</span><span class="topic-icon">↗</span></button>
+          <button class="topic-option" data-topic="travel"><span class="topic-number">03</span><span class="topic-title">Eat your way around</span><span class="topic-icon">↗</span></button>
+          <div class="topic-result" aria-live="polite"><span class="result-label">YOUR NEXT RABBIT HOLE</span><p class="result-title">Why does chilli burn?</p><p class="result-description">Discover how capsaicin tricks your brain into sensing heat.</p><a class="result-link" href="archive.html">LET’S GET CURIOUS <span>↗</span></a></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="newsletter">
+      <div class="newsletter-inner reveal"><span class="eyebrow">A FINAL LITTLE NUDGE</span><h2>Stay hungry.<br><em>Stay curious.</em></h2><p>New stories are cooking. Follow along on the original journal.</p><a class="dark-button" href="archive.html">EXPLORE THE JOURNAL <span>↗</span></a><span class="newsletter-star" aria-hidden="true">✳</span></div>
+    </section>
+  </main>
+  <footer class="site-footer"><a class="footer-wordmark" href="index.html">the big back club<span>.</span></a><span>WHERE FOOD MEETS SCIENCE</span><a href="index.html">BACK TO THE JOURNAL ↗</a><span>MADE WITH CURIOSITY, IN SINGAPORE.</span></footer>
+  <div class="cursor-note" aria-hidden="true">nice choice!</div>
+</body>
+</html>
