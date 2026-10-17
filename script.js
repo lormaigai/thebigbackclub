@@ -4,7 +4,7 @@ const blogHome = "https://thebigbackclub.wordpress.com/";
 const siteHome = window.location.pathname;
 const fallbackTopics = {
   science: { title: "Why does chilli burn?", description: "Discover how capsaicin tricks your brain into sensing heat.", search: "food science" },
-  health: { title: "What is food actually doing in your body?", description: "Explore the research behind everyday ingredients and the way we eat.", search: "health" },
+  health: { title: "What is food actually doing in your body?", description: "Explore the research behind everyday ingredients and the way you eat.", search: "health" },
   travel: { title: "A city, one bite at a time.", description: "Follow the flavours, street food and food culture worth travelling for.", search: "travel" }
 };
 
@@ -35,11 +35,10 @@ function initMenu() {
   drawer.id = "side-drawer";
   drawer.setAttribute("aria-label", "Site navigation");
   drawer.innerHTML = '<button class="drawer-close" aria-label="Close navigation">×</button><nav>'
-    + '<a href="' + siteHome + '">Home</a>'
-    + '<a href="' + siteHome + '#latest">The journal</a>'
-    + '<a href="' + siteHome + '#archive">All stories</a>'
-    + '<a href="' + siteHome + '#explore">Explore</a>'
-    + '<a href="' + siteHome + '#about">Our appetite</a></nav>';
+    + '<a href="index.html">Home</a>'
+    + '<a href="archive.html">All stories</a>'
+    + '<a href="explore.html">Explore</a>'
+    + '<a href="about.html">My appetite</a></nav>';
   const scrim = document.createElement("div");
   scrim.className = "drawer-scrim";
   document.body.append(drawer, scrim);
@@ -70,8 +69,7 @@ function initTopicPicker() {
     buttons.forEach(item => item.classList.toggle("active", item === button));
     title.textContent = topic.title;
     description.textContent = topic.description;
-    link.href = "#latest";
-    document.querySelector(".latest")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+    link.href = "archive.html";
     const result = document.querySelector(".topic-result");
     result.animate?.([{ transform: "translateY(5px)", opacity: .65 }, { transform: "translateY(0)", opacity: 1 }], { duration: 240, easing: "ease-out" });
   }));
@@ -105,11 +103,7 @@ function ownImage(post) {
 }
 
 function postImage(post, index) {
-  return ownImage(post) || firstContentImage(post?.content?.rendered) || [
-    "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=900&q=85"
-  ][index % 3];
+  return ownImage(post) || firstContentImage(post?.content?.rendered) || "";
 }
 
 function makePostCard(post, index) {
@@ -125,13 +119,23 @@ function makePostCard(post, index) {
   const readingTime = Math.max(2, Math.round(plainText(post.content?.rendered).split(/\s+/).filter(Boolean).length / 220));
   article.dataset.category = category;
   article.innerHTML = `
-    <a class="feature-image live-image" href="${url}" aria-label="Read: ${escapeAttribute(title)}" style="background-image:url('${escapeCssUrl(image)}')">
+    <a class="feature-image live-image${image ? "" : " no-photo"}" href="${url}" aria-label="Read: ${escapeAttribute(title)}"${image ? ` style="background-image:url('${escapeCssUrl(image)}')"` : ""}>
       <span class="image-index">FIELD NOTE ${String(index + 1).padStart(3, "0")}</span><span class="image-arrow">↗</span>
     </a>
     <div class="card-meta"><span>${escapeHtml(category.toUpperCase())}</span><span>${readingTime} MIN READ</span></div>
     <h3><a href="${url}">${escapeHtml(title)}</a></h3>
-    <p>${escapeHtml(excerpt || "A little more to discover about the food we eat and the world around it.")}</p>
+    <p>${escapeHtml(excerpt || "A little more to discover about the food on your plate and the world around it.")}</p>
     <a class="text-link" href="${url}">READ THE STORY <span>↗</span></a>`;
+  if (image) {
+    const probe = new Image();
+    probe.onerror = () => {
+      const link = article.querySelector(".feature-image");
+      if (!link) return;
+      link.style.backgroundImage = "";
+      link.classList.add("no-photo");
+    };
+    probe.src = image;
+  }
   return article;
 }
 
@@ -159,9 +163,17 @@ function keepLinksOnSite(html) {
   return holder.innerHTML;
 }
 
+function readerBackTarget() {
+  const onArchive = /archive\.html$/.test(window.location.pathname);
+  return onArchive
+    ? { href: "archive.html", label: "← BACK TO ALL STORIES" }
+    : { href: "index.html", label: "← BACK TO THE JOURNAL" };
+}
+
 async function loadWordPressArticle(slug) {
   const main = document.querySelector("main");
   if (!main) return;
+  const back = readerBackTarget();
   main.innerHTML = '<section class="reader-loading"><span class="eyebrow">OPENING THE NOTEBOOK</span><h1>One moment, curiosity is loading.</h1></section>';
   try {
     const response = await fetch(WP_API + "/posts?slug=" + encodeURIComponent(slug) + "&_embed=1", { headers: { Accept: "application/json" } });
@@ -175,7 +187,7 @@ async function loadWordPressArticle(slug) {
     const articleContent = keepLinksOnSite(post.content?.rendered || "<p>This article does not have any published content yet.</p>");
     main.innerHTML = `
       <article class="reader-page">
-        <div class="reader-topline"><a href="${siteHome}">← BACK TO THE JOURNAL</a></div>
+        <div class="reader-topline"><a href="${back.href}">${back.label}</a></div>
         <header class="reader-heading">
           <span class="eyebrow">${escapeHtml(category.toUpperCase())} · ${escapeHtml(formatArticleDate(post.date).toUpperCase())}</span>
           <h1>${escapeHtml(title)}</h1>
@@ -186,13 +198,13 @@ async function loadWordPressArticle(slug) {
         <div class="reader-content-wrap">
           <div class="reader-content">${articleContent}</div>
         </div>
-        <footer class="reader-end"><span class="reader-end-star">✳</span><a class="dark-button" href="${siteHome}#latest">KEEP EXPLORING <span>↗</span></a></footer>
+        <footer class="reader-end"><span class="reader-end-star">✳</span><a class="dark-button" href="archive.html">KEEP EXPLORING <span>↗</span></a></footer>
       </article>`;
     document.querySelectorAll(".reader-content > *").forEach(el => el.classList.add("reveal")); initReveal();
     document.title = title + " — The Big Back Club";
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   } catch (error) {
-    main.innerHTML = `<section class="reader-loading"><span class="eyebrow">A LITTLE DETOUR</span><h1>We couldn’t find that story.</h1><p>It may have moved, or the journal may be taking a moment to respond.</p><a class="dark-button" href="${siteHome}#latest">BACK TO THE JOURNAL <span>↗</span></a></section>`;
+    main.innerHTML = `<section class="reader-loading"><span class="eyebrow">A LITTLE DETOUR</span><h1>That story couldn’t be found.</h1><p>It may have moved, or the journal may be taking a moment to respond.</p><a class="dark-button" href="${back.href}">${back.label.replace("← ", "")} <span>↗</span></a></section>`;
     console.error("Could not load WordPress article:", error);
   }
 }
@@ -229,7 +241,8 @@ function initFallbackArticleLinks() {
         console.error("Could not open the selected story:", error);
         const main = document.querySelector("main");
         if (main) {
-          main.innerHTML = '<section class="reader-loading"><span class="eyebrow">THE JOURNAL IS TAKING A MOMENT</span><h1>We couldn’t load this story just now.</h1><p>Please check your connection and try again.</p><a class="dark-button" href="' + siteHome + '#latest">BACK TO THE JOURNAL <span>↗</span></a></section>';
+          const back = readerBackTarget();
+          main.innerHTML = '<section class="reader-loading"><span class="eyebrow">THE JOURNAL IS TAKING A MOMENT</span><h1>This story couldn’t load just now.</h1><p>Please check your connection and try again.</p><a class="dark-button" href="' + back.href + '">' + back.label.replace("← ", "") + ' <span>↗</span></a></section>';
           window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
         }
       } finally {
@@ -316,7 +329,7 @@ function initMicroInteractions() {
     element.addEventListener("mouseenter", () => {
       note.classList.add("show");
       if (element.classList.contains("feature-image")) note.textContent = "go on, have a look ↗";
-      else if (element.classList.contains("round-link")) note.textContent = "down we go ↓";
+      else if (element.classList.contains("round-link")) note.textContent = "down you go ↓";
       else note.textContent = "nice choice ↗";
     });
     element.addEventListener("mouseleave", () => note.classList.remove("show"));
