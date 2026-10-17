@@ -328,7 +328,8 @@ async function loadArchive() {
         chips.appendChild(button);
       });
     }
-    section.hidden = false;
+    const status = section.querySelector(".archive-status");
+    if (status) status.remove();
     const wanted = (new URLSearchParams(window.location.search).get("cat") || "").toLowerCase();
     if (wanted && chips) {
       const all = [...chips.querySelectorAll(".archive-chip")];
@@ -337,6 +338,10 @@ async function loadArchive() {
     }
   } catch (error) {
     console.info("Could not load the full story archive.", error);
+    const status = section.querySelector(".archive-status");
+    if (status) {
+      status.innerHTML = 'The stories are taking a moment to reach the kitchen. <a href="archive.html">Try again</a>.';
+    }
   }
 }
 
@@ -388,8 +393,16 @@ async function initCategoryMenus() {
   }
 }
 
+function rescueOldAnchors() {
+  const hash = window.location.hash;
+  if (!hash || document.querySelector(hash)) return;
+  const target = { "#archive": "archive.html", "#latest": "archive.html", "#explore": "explore.html", "#about": "about.html" }[hash];
+  if (target) window.location.replace(target);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initReveal();
+  rescueOldAnchors();
   initMenu();
   initCategoryMenus();
   initTopicPicker();

@@ -185,3 +185,5 @@ body{overflow-x:clip}
   .archive-grid .feature-card>p,.archive-grid .text-link{display:none}
   .archive-grid .card-meta{font-size:7px;margin-top:12px}
 }
+.archive-status{font:12px var(--mono);letter-spacing:.04em;opacity:.75;margin-top:40px}
+.archive-status a{border-bottom:1px solid var(--ink);padding-bottom:4px}
