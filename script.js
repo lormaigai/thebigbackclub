@@ -37,6 +37,9 @@ function initMenu() {
   drawer.innerHTML = '<button class="drawer-close" aria-label="Close navigation">×</button><nav>'
     + '<a href="index.html">Home</a>'
     + '<a href="archive.html">All stories</a>'
+    + '<a class="drawer-sub" href="archive.html?cat=science">Food science</a>'
+    + '<a class="drawer-sub" href="archive.html?cat=health">Food health</a>'
+    + '<a class="drawer-sub" href="archive.html?cat=travel">Travel</a>'
     + '<a href="explore.html">Explore</a>'
     + '<a href="about.html">My appetite</a></nav>';
   const scrim = document.createElement("div");
@@ -305,6 +308,11 @@ async function loadArchive() {
       });
     }
     section.hidden = false;
+    const wanted = (new URLSearchParams(window.location.search).get("cat") || "").toLowerCase();
+    if (wanted && chips) {
+      const match = [...chips.querySelectorAll(".archive-chip")].find(chip => chip.textContent.toLowerCase().includes(wanted));
+      if (match) match.click();
+    }
   } catch (error) {
     console.info("Could not load the full story archive.", error);
   }
