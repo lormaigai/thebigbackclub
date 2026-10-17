@@ -163,9 +163,17 @@ function keepLinksOnSite(html) {
   return holder.innerHTML;
 }
 
+function readerBackTarget() {
+  const onArchive = /archive\.html$/.test(window.location.pathname);
+  return onArchive
+    ? { href: "archive.html", label: "← BACK TO ALL STORIES" }
+    : { href: "index.html", label: "← BACK TO THE JOURNAL" };
+}
+
 async function loadWordPressArticle(slug) {
   const main = document.querySelector("main");
   if (!main) return;
+  const back = readerBackTarget();
   main.innerHTML = '<section class="reader-loading"><span class="eyebrow">OPENING THE NOTEBOOK</span><h1>One moment, curiosity is loading.</h1></section>';
   try {
     const response = await fetch(WP_API + "/posts?slug=" + encodeURIComponent(slug) + "&_embed=1", { headers: { Accept: "application/json" } });
@@ -179,7 +187,7 @@ async function loadWordPressArticle(slug) {
     const articleContent = keepLinksOnSite(post.content?.rendered || "<p>This article does not have any published content yet.</p>");
     main.innerHTML = `
       <article class="reader-page">
-        <div class="reader-topline"><a href="index.html">← BACK TO THE JOURNAL</a></div>
+        <div class="reader-topline"><a href="${back.href}">${back.label}</a></div>
         <header class="reader-heading">
           <span class="eyebrow">${escapeHtml(category.toUpperCase())} · ${escapeHtml(formatArticleDate(post.date).toUpperCase())}</span>
           <h1>${escapeHtml(title)}</h1>
@@ -196,7 +204,7 @@ async function loadWordPressArticle(slug) {
     document.title = title + " — The Big Back Club";
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   } catch (error) {
-    main.innerHTML = `<section class="reader-loading"><span class="eyebrow">A LITTLE DETOUR</span><h1>That story couldn’t be found.</h1><p>It may have moved, or the journal may be taking a moment to respond.</p><a class="dark-button" href="archive.html">BACK TO THE STORIES <span>↗</span></a></section>`;
+    main.innerHTML = `<section class="reader-loading"><span class="eyebrow">A LITTLE DETOUR</span><h1>That story couldn’t be found.</h1><p>It may have moved, or the journal may be taking a moment to respond.</p><a class="dark-button" href="${back.href}">${back.label.replace("← ", "")} <span>↗</span></a></section>`;
     console.error("Could not load WordPress article:", error);
   }
 }
@@ -233,7 +241,8 @@ function initFallbackArticleLinks() {
         console.error("Could not open the selected story:", error);
         const main = document.querySelector("main");
         if (main) {
-          main.innerHTML = '<section class="reader-loading"><span class="eyebrow">THE JOURNAL IS TAKING A MOMENT</span><h1>This story couldn’t load just now.</h1><p>Please check your connection and try again.</p><a class="dark-button" href="archive.html">BACK TO THE STORIES <span>↗</span></a></section>';
+          const back = readerBackTarget();
+          main.innerHTML = '<section class="reader-loading"><span class="eyebrow">THE JOURNAL IS TAKING A MOMENT</span><h1>This story couldn’t load just now.</h1><p>Please check your connection and try again.</p><a class="dark-button" href="' + back.href + '">' + back.label.replace("← ", "") + ' <span>↗</span></a></section>';
           window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
         }
       } finally {
