@@ -8,6 +8,50 @@ const fallbackTopics = {
   travel: { title: "A city, one bite at a time.", description: "Follow the flavours, street food and food culture worth travelling for.", search: "travel" }
 };
 
+
+// Story posts are cached locally so the archive can render instantly on the next
+// visit; every showing is then quietly refreshed from WordPress so new stories appear.
+const POSTS_CACHE_KEY = "bbc-posts-cache-v1";
+const POSTS_CACHE_FRESH_MS = 30 * 60 * 1000;
+
+function readPostsCache() {
+  try {
+    const raw = localStorage.getItem(POSTS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.posts) || !parsed.posts.length) return null;
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writePostsCache(posts) {
+  try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), posts })); } catch (error) { /* storage full or unavailable: the live fetch still works */ }
+}
+
+async function fetchAllPosts() {
+  let posts = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const response = await fetch(WP_API + "/posts?per_page=100&page=" + page + "&status=publish&_embed=1&orderby=date&order=desc", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("WordPress returned " + response.status);
+    totalPages = Number(response.headers.get("X-WP-TotalPages")) || 1;
+    posts = posts.concat(await response.json());
+    page += 1;
+  } while (page <= totalPages);
+  if (posts.length) writePostsCache(posts);
+  return posts;
+}
+
+// Keep the cache warm on pages without a story grid so the archive opens instantly later.
+function warmPostsCache() {
+  const cached = readPostsCache();
+  if (cached && Date.now() - (cached.savedAt || 0) < POSTS_CACHE_FRESH_MS) return;
+  fetchAllPosts().catch(() => { /* a cold cache just means the archive shows its loading state */ });
+}
+
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function initReveal() {
@@ -278,66 +322,82 @@ function initFallbackArticleLinks() {
 async function loadWordPressPosts() {
   const grid = document.querySelector(".featured-grid");
   if (!grid) return;
-  try {
-    const response = await fetch(WP_API + "/posts?per_page=3&status=publish&_embed=1&orderby=date&order=desc", { headers: { Accept: "application/json" } });
-    if (!response.ok) throw new Error("WordPress returned " + response.status);
-    const posts = await response.json();
-    if (!Array.isArray(posts) || posts.length === 0) return;
-    grid.replaceChildren(...posts.map(makePostCard));
+  const renderLatest = posts => {
+    grid.replaceChildren(...posts.slice(0, 3).map(makePostCard));
     initReveal();
+  };
+  const cached = readPostsCache();
+  if (cached) renderLatest(cached.posts);
+  try {
+    renderLatest(await fetchAllPosts());
   } catch (error) {
-    console.info("Using the built-in journal preview because the WordPress feed could not be loaded.", error);
+    if (!cached) console.info("Using the built-in journal preview because the WordPress feed could not be loaded.", error);
   }
+}
+
+function renderArchivePosts(posts) {
+  const section = document.querySelector("#archive");
+  const grid = document.querySelector(".archive-grid");
+  if (!section || !grid || !posts.length) return;
+  const chips = section.querySelector(".archive-filters");
+  const count = section.querySelector(".archive-count");
+  const cards = posts.map((post, index) => makePostCard(post, index));
+  cards.forEach(card => card.classList.add("is-visible"));
+  grid.replaceChildren(...cards);
+  if (count) count.textContent = posts.length + (posts.length === 1 ? " STORY" : " STORIES");
+  const categories = [...new Set(cards.flatMap(card => (card.dataset.categories || "").split("|").filter(Boolean)))]
+    .map(categoryLabel);
+  if (chips && categories.length > 1) {
+    chips.innerHTML = "";
+    ["All", ...categories].forEach((name, position) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = name;
+      button.className = "archive-chip" + (position === 0 ? " active" : "");
+      button.addEventListener("click", () => {
+        chips.querySelectorAll(".archive-chip").forEach(chip => chip.classList.toggle("active", chip === button));
+        cards.forEach(card => { card.hidden = position !== 0 && !(card.dataset.categories || "").split("|").includes(name.toLowerCase()); });
+      });
+      chips.appendChild(button);
+    });
+  }
+  const status = section.querySelector(".archive-status");
+  if (status) status.remove();
+  const wanted = (new URLSearchParams(window.location.search).get("cat") || "").toLowerCase();
+  if (wanted && chips) {
+    const all = [...chips.querySelectorAll(".archive-chip")];
+    const match = all.find(chip => chip.textContent.toLowerCase() === wanted) || all.find(chip => chip.textContent.toLowerCase().includes(wanted));
+    if (match) match.click();
+  }
+}
+
+// Placeholder tiles hold the archive's shape on a first-ever visit, so the page
+// never collapses onto the section below while the stories are on their way.
+function showArchiveSkeletons(grid) {
+  const tiles = [];
+  for (let index = 0; index < 6; index += 1) {
+    const tile = document.createElement("div");
+    tile.className = "archive-skeleton";
+    tile.setAttribute("aria-hidden", "true");
+    tile.innerHTML = '<span class="skeleton-image"></span><span class="skeleton-line"></span><span class="skeleton-line short"></span>';
+    tiles.push(tile);
+  }
+  grid.replaceChildren(...tiles);
 }
 
 async function loadArchive() {
   const section = document.querySelector("#archive");
   const grid = document.querySelector(".archive-grid");
   if (!section || !grid) return;
-  const chips = section.querySelector(".archive-filters");
-  const count = section.querySelector(".archive-count");
+  const cached = readPostsCache();
+  if (cached) renderArchivePosts(cached.posts);
+  else if (!grid.children.length) showArchiveSkeletons(grid);
   try {
-    let posts = [];
-    let page = 1;
-    let totalPages = 1;
-    do {
-      const response = await fetch(WP_API + "/posts?per_page=100&page=" + page + "&status=publish&_embed=1&orderby=date&order=desc", { headers: { Accept: "application/json" } });
-      if (!response.ok) throw new Error("WordPress returned " + response.status);
-      totalPages = Number(response.headers.get("X-WP-TotalPages")) || 1;
-      posts = posts.concat(await response.json());
-      page += 1;
-    } while (page <= totalPages);
-    if (!posts.length) return;
-    const cards = posts.map((post, index) => makePostCard(post, index));
-    cards.forEach(card => card.classList.add("is-visible"));
-    grid.replaceChildren(...cards);
-    if (count) count.textContent = posts.length + (posts.length === 1 ? " STORY" : " STORIES");
-    const categories = [...new Set(cards.flatMap(card => (card.dataset.categories || "").split("|").filter(Boolean)))]
-      .map(categoryLabel);
-    if (chips && categories.length > 1) {
-      chips.innerHTML = "";
-      ["All", ...categories].forEach((name, position) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = name;
-        button.className = "archive-chip" + (position === 0 ? " active" : "");
-        button.addEventListener("click", () => {
-          chips.querySelectorAll(".archive-chip").forEach(chip => chip.classList.toggle("active", chip === button));
-          cards.forEach(card => { card.hidden = position !== 0 && !(card.dataset.categories || "").split("|").includes(name.toLowerCase()); });
-        });
-        chips.appendChild(button);
-      });
-    }
-    const status = section.querySelector(".archive-status");
-    if (status) status.remove();
-    const wanted = (new URLSearchParams(window.location.search).get("cat") || "").toLowerCase();
-    if (wanted && chips) {
-      const all = [...chips.querySelectorAll(".archive-chip")];
-      const match = all.find(chip => chip.textContent.toLowerCase() === wanted) || all.find(chip => chip.textContent.toLowerCase().includes(wanted));
-      if (match) match.click();
-    }
+    renderArchivePosts(await fetchAllPosts());
   } catch (error) {
     console.info("Could not load the full story archive.", error);
+    if (cached) return;
+    grid.replaceChildren();
     const status = section.querySelector(".archive-status");
     if (status) {
       status.innerHTML = 'The stories are taking a moment to reach the kitchen. <a href="archive.html">Try again</a>.';
@@ -400,6 +460,14 @@ function rescueOldAnchors() {
   if (target) window.location.replace(target);
 }
 
+
+window.addEventListener("pageshow", event => {
+  if (!event.persisted) return;
+  const grid = document.querySelector(".archive-grid");
+  const cached = readPostsCache();
+  if (grid && cached && !grid.querySelector(".feature-card")) renderArchivePosts(cached.posts);
+});
+
 document.addEventListener("DOMContentLoaded", () => {
   initReveal();
   rescueOldAnchors();
@@ -410,8 +478,9 @@ document.addEventListener("DOMContentLoaded", () => {
   initMicroInteractions();
   initFallbackArticleLinks();
   const articleSlug = new URLSearchParams(window.location.search).get("article");
-  if (articleSlug) loadWordPressArticle(articleSlug);
-  else { loadWordPressPosts(); loadArchive(); }
+  if (articleSlug) { loadWordPressArticle(articleSlug); warmPostsCache(); }
+  else if (document.querySelector(".archive-grid, .featured-grid")) { loadWordPressPosts(); loadArchive(); }
+  else warmPostsCache();
 });
 
 (function scrollMotion() {
