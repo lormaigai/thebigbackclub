@@ -16,7 +16,14 @@
   <header class="site-header">
     <a class="wordmark" href="index.html" aria-label="The Big Back Club home">the big <span>back</span> club<span class="wordmark-dot">.</span></a>
     <nav class="desktop-nav" aria-label="Main navigation">
-      <a href="archive.html">All stories</a>
+      <div class="nav-item has-dropdown">
+        <a href="archive.html" aria-haspopup="true">All stories</a>
+        <div class="nav-dropdown" aria-label="Story categories">
+          <a href="archive.html?cat=food%20science">Food science</a>
+          <a href="archive.html?cat=food%20health">Food health</a>
+          <a href="archive.html?cat=travel">Travel</a>
+        </div>
+      </div>
       <a href="explore.html">Explore</a>
       <a href="about.html">My appetite</a>
     </nav>
@@ -24,12 +31,13 @@
     <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false"><span></span><span></span></button>
   </header>
   <main id="archive-page">
-    <section class="archive section-pad" id="archive" hidden>
+    <section class="archive section-pad" id="archive">
       <div class="section-heading">
         <div><span class="eyebrow">ALL STORIES / <span class="archive-count"></span></span><h2>Every story,<br><em>in one place.</em></h2></div>
         <div class="archive-filters" role="group" aria-label="Filter stories by category"></div>
       </div>
       <div class="archive-grid"></div>
+      <p class="archive-status">One moment, the stories are loading.</p>
     </section>
 
     <section class="newsletter">

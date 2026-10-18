@@ -163,3 +163,27 @@ body{overflow-x:clip}
 .archives-down:hover{transform:translateY(4px);background:var(--soft)}
 .feature-image.no-photo{background:var(--soft);display:grid;place-items:center}
 .feature-image.no-photo:after{content:"✳";font-size:64px;color:var(--title);opacity:.55}
+.nav-item.has-dropdown{position:relative;display:flex;align-items:center}
+.nav-dropdown{position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%) translateY(6px);min-width:180px;background:var(--paper);border:1px solid var(--ink);border-radius:16px;padding:8px;display:none;flex-direction:column;z-index:12;box-shadow:4px 4px 0 var(--line)}
+.nav-dropdown:before{content:"";position:absolute;top:-16px;left:0;right:0;height:16px}
+.has-dropdown:hover .nav-dropdown,.has-dropdown:focus-within .nav-dropdown{display:flex}
+.nav-dropdown a{padding:10px 16px;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;border-radius:10px}
+.nav-dropdown a:hover,.nav-dropdown a:focus-visible{background:var(--soft)}
+.nav-dropdown a:after{display:none}
+.side-drawer nav a.drawer-sub{font-size:20px;padding:2px 0 2px 30px;opacity:.85}
+.drawer-group{display:flex;align-items:center;gap:16px}
+.drawer-subtoggle{width:36px;height:36px;border:1px solid var(--ink);border-radius:50%;background:none;font-size:15px;color:var(--ink);cursor:pointer;flex:none;transition:background .25s}
+.drawer-subtoggle[aria-expanded="true"]{background:var(--soft)}
+.drawer-sublist{display:flex;flex-direction:column;padding-left:30px}
+.drawer-sublist[hidden]{display:none}
+.archive-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.archive-grid .feature-image{aspect-ratio:1}
+.archive-grid .offset-card{margin-top:0}
+@media(max-width:600px){
+  .archive-grid{gap:16px}
+  .archive-grid .feature-card h3{font-size:17px}
+  .archive-grid .feature-card>p,.archive-grid .text-link{display:none}
+  .archive-grid .card-meta{font-size:7px;margin-top:12px}
+}
+.archive-status{font:12px var(--mono);letter-spacing:.04em;opacity:.75;margin-top:40px}
+.archive-status a{border-bottom:1px solid var(--ink);padding-bottom:4px}

@@ -36,7 +36,11 @@ function initMenu() {
   drawer.setAttribute("aria-label", "Site navigation");
   drawer.innerHTML = '<button class="drawer-close" aria-label="Close navigation">×</button><nav>'
     + '<a href="index.html">Home</a>'
-    + '<a href="archive.html">All stories</a>'
+    + '<div class="drawer-group"><a href="archive.html">All stories</a><button class="drawer-subtoggle" type="button" aria-expanded="false" aria-controls="drawer-sublist" aria-label="Show story categories">↓</button></div>'
+    + '<div class="drawer-sublist" id="drawer-sublist" hidden>'
+    + '<a class="drawer-sub" href="archive.html?cat=food%20science">Food science</a>'
+    + '<a class="drawer-sub" href="archive.html?cat=food%20health">Food health</a>'
+    + '<a class="drawer-sub" href="archive.html?cat=travel">Travel</a></div>'
     + '<a href="explore.html">Explore</a>'
     + '<a href="about.html">My appetite</a></nav>';
   const scrim = document.createElement("div");
@@ -54,8 +58,17 @@ function initMenu() {
   toggle.addEventListener("click", () => setOpen(!drawer.classList.contains("open")));
   scrim.addEventListener("click", () => setOpen(false));
   drawer.querySelector(".drawer-close").addEventListener("click", () => setOpen(false));
-  drawer.querySelectorAll("a").forEach(link => link.addEventListener("click", () => setOpen(false)));
+  drawer.addEventListener("click", event => { if (event.target.closest("a")) setOpen(false); });
   document.addEventListener("keydown", event => { if (event.key === "Escape") setOpen(false); });
+  const subtoggle = drawer.querySelector(".drawer-subtoggle");
+  const sublist = drawer.querySelector(".drawer-sublist");
+  if (subtoggle && sublist) subtoggle.addEventListener("click", () => {
+    const open = sublist.hidden;
+    sublist.hidden = !open;
+    subtoggle.setAttribute("aria-expanded", String(open));
+    subtoggle.setAttribute("aria-label", open ? "Hide story categories" : "Show story categories");
+    subtoggle.textContent = open ? "↑" : "↓";
+  });
 }
 
 function initTopicPicker() {
@@ -81,9 +94,18 @@ function plainText(html) {
   return (element.textContent || element.innerText || "").replace(/\s+/g, " ").trim();
 }
 
-function categoryFor(post) {
+function categoryLabel(name) {
+  const sentence = name.charAt(0).toUpperCase() + name.slice(1);
+  return sentence.replace(/&([a-z])/g, (match, letter) => "&" + letter.toUpperCase());
+}
+
+function allCategoryNames(post) {
   const terms = post?._embedded?.["wp:term"]?.flat?.() || [];
-  const names = terms.map(term => plainText(term.name)).filter(Boolean);
+  return terms.filter(term => term.taxonomy === "category").map(term => plainText(term.name)).filter(Boolean).map(name => name.toLowerCase());
+}
+
+function categoryFor(post) {
+  const names = allCategoryNames(post);
   const pick = names.find(name => /science|health|travel/i.test(name)) || names[0] || "From the journal";
   return pick.charAt(0).toUpperCase() + pick.slice(1);
 }
@@ -118,6 +140,7 @@ function makePostCard(post, index) {
   const image = postImage(post, index);
   const readingTime = Math.max(2, Math.round(plainText(post.content?.rendered).split(/\s+/).filter(Boolean).length / 220));
   article.dataset.category = category;
+  article.dataset.categories = allCategoryNames(post).join("|");
   article.innerHTML = `
     <a class="feature-image live-image${image ? "" : " no-photo"}" href="${url}" aria-label="Read: ${escapeAttribute(title)}"${image ? ` style="background-image:url('${escapeCssUrl(image)}')"` : ""}>
       <span class="image-index">FIELD NOTE ${String(index + 1).padStart(3, "0")}</span><span class="image-arrow">↗</span>
@@ -289,7 +312,8 @@ async function loadArchive() {
     cards.forEach(card => card.classList.add("is-visible"));
     grid.replaceChildren(...cards);
     if (count) count.textContent = posts.length + (posts.length === 1 ? " STORY" : " STORIES");
-    const categories = [...new Set(cards.map(card => card.dataset.category))];
+    const categories = [...new Set(cards.flatMap(card => (card.dataset.categories || "").split("|").filter(Boolean)))]
+      .map(categoryLabel);
     if (chips && categories.length > 1) {
       chips.innerHTML = "";
       ["All", ...categories].forEach((name, position) => {
@@ -299,14 +323,25 @@ async function loadArchive() {
         button.className = "archive-chip" + (position === 0 ? " active" : "");
         button.addEventListener("click", () => {
           chips.querySelectorAll(".archive-chip").forEach(chip => chip.classList.toggle("active", chip === button));
-          cards.forEach(card => { card.hidden = position !== 0 && card.dataset.category !== name; });
+          cards.forEach(card => { card.hidden = position !== 0 && !(card.dataset.categories || "").split("|").includes(name.toLowerCase()); });
         });
         chips.appendChild(button);
       });
     }
-    section.hidden = false;
+    const status = section.querySelector(".archive-status");
+    if (status) status.remove();
+    const wanted = (new URLSearchParams(window.location.search).get("cat") || "").toLowerCase();
+    if (wanted && chips) {
+      const all = [...chips.querySelectorAll(".archive-chip")];
+      const match = all.find(chip => chip.textContent.toLowerCase() === wanted) || all.find(chip => chip.textContent.toLowerCase().includes(wanted));
+      if (match) match.click();
+    }
   } catch (error) {
     console.info("Could not load the full story archive.", error);
+    const status = section.querySelector(".archive-status");
+    if (status) {
+      status.innerHTML = 'The stories are taking a moment to reach the kitchen. <a href="archive.html">Try again</a>.';
+    }
   }
 }
 
@@ -336,9 +371,40 @@ function initMicroInteractions() {
   });
 }
 
+async function initCategoryMenus() {
+  const dropdown = document.querySelector(".nav-dropdown");
+  const sublist = document.querySelector(".drawer-sublist");
+  if (!dropdown && !sublist) return;
+  try {
+    const response = await fetch(WP_API + "/categories?per_page=100&hide_empty=true&orderby=count&order=desc", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("WordPress returned " + response.status);
+    const categories = await response.json();
+    if (!Array.isArray(categories) || !categories.length) return;
+    const links = categories.map(category => {
+      const raw = plainText(category.name);
+      if (!raw) return null;
+      return { label: categoryLabel(raw.toLowerCase()), href: "archive.html?cat=" + encodeURIComponent(raw.toLowerCase()) };
+    }).filter(Boolean);
+    if (!links.length) return;
+    if (dropdown) dropdown.innerHTML = links.map(link => '<a href="' + link.href + '">' + escapeHtml(link.label) + "</a>").join("");
+    if (sublist) sublist.innerHTML = links.map(link => '<a class="drawer-sub" href="' + link.href + '">' + escapeHtml(link.label) + "</a>").join("");
+  } catch (error) {
+    console.info("Using the built-in category list because the WordPress categories could not be loaded.", error);
+  }
+}
+
+function rescueOldAnchors() {
+  const hash = window.location.hash;
+  if (!hash || document.querySelector(hash)) return;
+  const target = { "#archive": "archive.html", "#latest": "archive.html", "#explore": "explore.html", "#about": "about.html" }[hash];
+  if (target) window.location.replace(target);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initReveal();
+  rescueOldAnchors();
   initMenu();
+  initCategoryMenus();
   initTopicPicker();
   initImageMotion();
   initMicroInteractions();
