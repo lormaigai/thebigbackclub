@@ -30,6 +30,22 @@ function writePostsCache(posts) {
   try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), posts })); } catch (error) { /* storage full or unavailable: the live fetch still works */ }
 }
 
+
+// The first paint comes from the newest stories copy already on hand: the snapshot
+// bundled with this site version, or the browser cache if a live refresh made it newer.
+function readSnapshotPosts() {
+  const snap = window.BBC_POSTS_SNAPSHOT;
+  if (!snap || !Array.isArray(snap.posts) || !snap.posts.length) return null;
+  return { savedAt: Date.parse(snap.savedAt) || 0, posts: snap.posts };
+}
+
+function getInitialPosts() {
+  const snapshot = readSnapshotPosts();
+  const cached = readPostsCache();
+  if (snapshot && cached) return cached.savedAt > snapshot.savedAt ? cached.posts : snapshot.posts;
+  return (snapshot || cached || {}).posts || null;
+}
+
 async function fetchAllPosts() {
   let posts = [];
   let page = 1;
@@ -169,7 +185,7 @@ function ownImage(post) {
 }
 
 function postImage(post, index) {
-  return ownImage(post) || firstContentImage(post?.content?.rendered) || "";
+  return ownImage(post) || post?._firstImage || firstContentImage(post?.content?.rendered) || "";
 }
 
 function makePostCard(post, index) {
@@ -182,7 +198,7 @@ function makePostCard(post, index) {
   const date = post.date ? new Date(post.date).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" }) : "THE JOURNAL";
   const url = siteHome + "?article=" + encodeURIComponent(post.slug || "");
   const image = postImage(post, index);
-  const readingTime = Math.max(2, Math.round(plainText(post.content?.rendered).split(/\s+/).filter(Boolean).length / 220));
+  const readingTime = Math.max(2, Math.round((post._words || plainText(post.content?.rendered).split(/\s+/).filter(Boolean).length) / 220));
   article.dataset.category = category;
   article.dataset.categories = allCategoryNames(post).join("|");
   article.innerHTML = `
@@ -326,12 +342,12 @@ async function loadWordPressPosts() {
     grid.replaceChildren(...posts.slice(0, 3).map(makePostCard));
     initReveal();
   };
-  const cached = readPostsCache();
-  if (cached) renderLatest(cached.posts);
+  const initial = getInitialPosts();
+  if (initial) renderLatest(initial);
   try {
     renderLatest(await fetchAllPosts());
   } catch (error) {
-    if (!cached) console.info("Using the built-in journal preview because the WordPress feed could not be loaded.", error);
+    if (!initial) console.info("Using the built-in journal preview because the WordPress feed could not be loaded.", error);
   }
 }
 
@@ -389,14 +405,14 @@ async function loadArchive() {
   const section = document.querySelector("#archive");
   const grid = document.querySelector(".archive-grid");
   if (!section || !grid) return;
-  const cached = readPostsCache();
-  if (cached) renderArchivePosts(cached.posts);
+  const initial = getInitialPosts();
+  if (initial) renderArchivePosts(initial);
   else if (!grid.children.length) showArchiveSkeletons(grid);
   try {
     renderArchivePosts(await fetchAllPosts());
   } catch (error) {
     console.info("Could not load the full story archive.", error);
-    if (cached) return;
+    if (initial) return;
     grid.replaceChildren();
     const status = section.querySelector(".archive-status");
     if (status) {
@@ -464,8 +480,8 @@ function rescueOldAnchors() {
 window.addEventListener("pageshow", event => {
   if (!event.persisted) return;
   const grid = document.querySelector(".archive-grid");
-  const cached = readPostsCache();
-  if (grid && cached && !grid.querySelector(".feature-card")) renderArchivePosts(cached.posts);
+  const initial = getInitialPosts();
+  if (grid && initial && !grid.querySelector(".feature-card")) renderArchivePosts(initial);
 });
 
 document.addEventListener("DOMContentLoaded", () => {
