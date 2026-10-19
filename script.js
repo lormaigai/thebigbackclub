@@ -102,7 +102,7 @@ function initMenu() {
     + '<a class="drawer-sub" href="archive.html?cat=food%20health">Food health</a>'
     + '<a class="drawer-sub" href="archive.html?cat=travel">Travel</a></div>'
     + '<a href="explore.html">Explore</a>'
-    + '<a href="about.html">My appetite</a></nav>';
+    + '<a href="about.html">About</a></nav>';
   const scrim = document.createElement("div");
   scrim.className = "drawer-scrim";
   document.body.append(drawer, scrim);
