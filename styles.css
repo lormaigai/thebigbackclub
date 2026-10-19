@@ -192,3 +192,7 @@ body{overflow-x:clip}
 .archive-skeleton .skeleton-line.short{width:55%}
 @keyframes skeleton-pulse{50%{opacity:.4}}
 @media(prefers-reduced-motion:reduce){.archive-skeleton .skeleton-image,.archive-skeleton .skeleton-line{animation:none}}
+
+
+/* Simpler about page: stamp, slogan and aside removed; single readable column */
+#about-page .about-strip{display:block;max-width:720px}
